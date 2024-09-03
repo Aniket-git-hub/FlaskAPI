@@ -1,0 +1,92 @@
+services:
+    web:
+        build:
+            context: .
+            dockerfile: docker/flask/Dockerfile
+        container_name: flask_app
+        restart: always
+        command:
+            ["gunicorn", "app:create_app()", "-b", "0.0.0.0:8000", "-w", "4"]
+        volumes:
+            - .:/app
+            - ./uploads:/uploads
+        env_file:
+            - .env
+        depends_on:
+            - db
+            - redis
+        healthcheck:
+            test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 40s
+        networks:
+            - app-network
+        ports:
+            - "8000:8000"
+
+    celery_worker:
+        build:
+            context: .
+            dockerfile: docker/celery/Dockerfile
+        container_name: celery_worker
+        restart: always
+        command:
+            [
+                "celery",
+                "-A",
+                "app.celery_worker.celery",
+                "worker",
+                "--concurrency=8",
+            ]
+        user: celery:celery
+        volumes:
+            - .:/app
+            - ./uploads:/uploads
+        env_file:
+            - .env
+        depends_on:
+            - db
+            - redis
+            - web
+        networks:
+            - app-network
+
+    db:
+        image: postgres:13
+        container_name: postgres_db
+        restart: always
+        env_file:
+            - .env
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        networks:
+            - app-network
+
+    redis:
+        image: redis:6
+        container_name: redis
+        restart: always
+        networks:
+            - app-network
+
+    nginx:
+        build:
+            context: .
+            dockerfile: docker/nginx/Dockerfile
+        container_name: nginx
+        restart: always
+        depends_on:
+            - web
+        ports:
+            - "80:80"
+        networks:
+            - app-network
+
+volumes:
+    postgres_data:
+
+networks:
+    app-network:
+        driver: bridge
