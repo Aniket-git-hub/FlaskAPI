@@ -29,9 +29,15 @@ def upload_video_controller(request):
     db.session.commit()
 
     # Assign the task to Celery
-    current_app.celery.send_task('app.tasks.video_tasks.process_video_task', args=[video.id, upload_path])
+    result = process_video_task.delay(video.id, upload_path)
 
-    return jsonify({'message': 'File uploaded successfully', 'video_id': video.id}), 201
+    return jsonify({'message': 'File uploaded successfully', 'video_id': video.id, 'id': result.id}), 201
+
+def abort_video_processing_controller(task_id): 
+    task = process_video_task.AsyncResult(task_id)
+    task.abort()
+    return jsonify({'message': 'Video Processing Aborted'}), 200
+    
 
 def get_video_status_controller(video_id):
     video = Video.query.get_or_404(video_id)

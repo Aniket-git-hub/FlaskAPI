@@ -5,8 +5,7 @@ services:
             dockerfile: docker/flask/Dockerfile
         container_name: flask_app
         restart: always
-        command:
-            ["gunicorn", "app:create_app()", "-b", "0.0.0.0:8000", "-w", "4"]
+        command: ["gunicorn", "app:app", "-b", "0.0.0.0:8000", "-w", "4"]
         volumes:
             - .:/app
             - ./uploads:/uploads
@@ -32,14 +31,7 @@ services:
             dockerfile: docker/celery/Dockerfile
         container_name: celery_worker
         restart: always
-        command:
-            [
-                "celery",
-                "-A",
-                "app.celery_worker.celery",
-                "worker",
-                "--concurrency=8",
-            ]
+        command: ["celery", "-A", "app.celery", "worker", "--concurrency=8"]
         user: celery:celery
         volumes:
             - .:/app

@@ -5,9 +5,10 @@ from app.models.video import Video
 import os
 import time
 import logging
-from app.celery_worker import celery
+from celery import shared_task
+from celery.contrib.abortable import AbortableTask
 
-@celery.task(bind=True)
+@shared_task(bind=True, base=AbortableTask)
 def process_video_task(self, video_id, file_path):
     try:
         video = Video.query.get(video_id)
@@ -20,7 +21,12 @@ def process_video_task(self, video_id, file_path):
         db.session.commit()
 
         # Simulate processing delay
-        time.sleep(2)  # Simulate a delay before processing
+        time.sleep(5)  # Simulate a delay before processing
+        
+        if self.is_aborted:
+            print(f'Processing aborted for video_id: {video_id}')
+            logging.info(f'Processing aborted for video_id: {video_id}')
+            return
 
         # Update status to processing
         video.status = Video.STATUS_PROCESSING
@@ -36,7 +42,7 @@ def process_video_task(self, video_id, file_path):
         # Delete the processed file to clean up
         if os.path.exists(file_path):
             os.remove(file_path)
-
+        
         logging.info(f'Completed processing for video_id: {video_id}')
 
     except Exception as e:
