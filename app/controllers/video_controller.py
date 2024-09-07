@@ -33,6 +33,38 @@ def upload_video_controller(request):
 
     return jsonify({'message': 'File uploaded successfully', 'video_id': video.id, 'id': result.id}), 201
 
+
+def get_all_videos_controller(status=None, page=1, per_page=10):
+    query = Video.query
+    
+    if status:
+        query = query.filter_by(status=status)
+    
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    videos = pagination.items
+    total_videos = pagination.total
+    total_pages = pagination.pages
+    current_page = pagination.page
+    
+    videos_data = [{
+        'video_id': video.id,
+        'filename': video.filename,
+        'status': video.status,
+        'created_at': video.created_at.isoformat(),
+        'updated_at': video.updated_at.isoformat()
+    } for video in videos]
+    
+    return jsonify({
+        'videos': videos_data,
+        'total_videos': total_videos,
+        'total_pages': total_pages,
+        'current_page': current_page,
+        'per_page': per_page
+    }), 200
+
+
+
 def abort_video_processing_controller(task_id): 
     task = process_video_task.AsyncResult(task_id)
     task.abort()

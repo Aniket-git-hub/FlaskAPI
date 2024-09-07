@@ -16,17 +16,13 @@ def process_video_task(self, video_id, file_path):
             logging.error(f'Video with id {video_id} not found')
             return
         
-        # Update status to queued
-        video.status = Video.STATUS_QUEUED
-        db.session.commit()
-
         # Simulate processing delay
         time.sleep(5)  # Simulate a delay before processing
         
-        if self.is_aborted:
-            print(f'Processing aborted for video_id: {video_id}')
-            logging.info(f'Processing aborted for video_id: {video_id}')
-            return
+        # if self.is_aborted:
+        #     print(f'Processing aborted for video_id: {video_id}')
+        #     logging.info(f'Processing aborted for video_id: {video_id}')
+        #     return
 
         # Update status to processing
         video.status = Video.STATUS_PROCESSING
