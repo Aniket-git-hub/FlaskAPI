@@ -1,7 +1,7 @@
 # app/routes/video_routes.py
 
 from flask import Blueprint, request, jsonify, current_app, render_template
-from app.controllers.video_controller import upload_video_controller, get_video_status_controller, abort_video_processing_controller, get_all_videos_controller
+from app.controllers.video_controller import upload_video_controller, get_video_status_controller, abort_video_processing_controller, get_all_videos_controller, get_video_operations_controller
 from app.models.video import Video
 
 video_blueprint = Blueprint('video', __name__)
@@ -33,6 +33,14 @@ def get_all_videos_route():
     per_page = request.args.get('per_page', 10, type=int)
     
     return get_all_videos_controller(status, page, per_page)
+
+
+@video_blueprint.route('/api/video/<int:video_id>/operations', methods=['GET'])
+def get_all_video_operations_route(video_id):
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+    return get_video_operations_controller(video_id, page, per_page)
 
 
 @video_blueprint.app_errorhandler(404)

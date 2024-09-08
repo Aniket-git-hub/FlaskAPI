@@ -9,6 +9,8 @@ services:
         volumes:
             - .:/app
             - ./uploads:/uploads
+            - ./logos:/logos
+            - ./processed_videos:/processed_videos
         env_file:
             - .env
         depends_on:
@@ -31,7 +33,7 @@ services:
             dockerfile: docker/celery/Dockerfile
         container_name: celery_worker
         restart: always
-        command: ["celery", "-A", "app.celery", "worker", "--concurrency=8"]
+        command: ["celery", "-A", "app.celery", "worker", "--concurrency=12"]
         user: celery:celery
         volumes:
             - .:/app
@@ -45,10 +47,27 @@ services:
         networks:
             - app-network
 
+    flower:
+        image: mher/flower:latest
+        container_name: celery_flower
+        restart: always
+        command:
+            ["celery", "--broker=redis://redis:6379/0", "flower", "--port=5555"]
+        ports:
+            - "5555:5555"
+        depends_on:
+            - redis
+        networks:
+            - app-network
+
     db:
-        image: postgres:13
+        image: postgres:latest
         container_name: postgres_db
         restart: always
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_DB=postgres
         env_file:
             - .env
         volumes:
@@ -73,6 +92,15 @@ services:
             - web
         ports:
             - "80:80"
+        networks:
+            - app-network
+
+    adminer:
+        image: adminer
+        container_name: adminer
+        restart: always
+        ports:
+            - "8080:8080"
         networks:
             - app-network
 

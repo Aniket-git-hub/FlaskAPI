@@ -2,3 +2,6 @@
 __pycache__
 uploads
 uploads/
+logos/
+processed_videos/
+app.log

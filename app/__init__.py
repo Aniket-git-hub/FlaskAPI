@@ -1,5 +1,4 @@
-# app/__init__.py
-
+import logging
 from flask import Flask, request
 from flask_cors import CORS
 from app.config import Config
@@ -9,6 +8,28 @@ from app.routes.video_routes import video_blueprint
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # Configure logging
+    if not app.debug:
+        # In production, log to a file
+        # file_handler = logging.FileHandler('app.log')
+        print("In Production")
+        # file_handler.setLevel(logging.INFO)
+        # file_handler.setFormatter(logging.Formatter(
+        #     '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        # ))
+        # app.logger.addHandler(file_handler)
+    else:
+        # In development, log to console
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        app.logger.addHandler(stream_handler)
+
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('Flask app startup')
 
     # Enable CORS
     CORS(app, resources={
@@ -32,7 +53,7 @@ def create_app(config_class=Config):
 
     # Register blueprints
     app.register_blueprint(video_blueprint)
-    
+
     @app.after_request
     def after_request(response):
         # For non-API routes, allow all origins
@@ -44,9 +65,8 @@ def create_app(config_class=Config):
 
     return app, celery
 
-
 app, celery = create_app()
 app.app_context().push()
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
