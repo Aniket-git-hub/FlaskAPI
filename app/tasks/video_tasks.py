@@ -13,6 +13,7 @@ from app.services.videos.create_clips import create_clips
 from app.services.videos.merge_clips import merge_clips
 from app.services.videos.change_aspect_ratio import change_aspect_ratio
 from app.services.videos.add_logo import add_logo_to_video
+from app.services.captioning.caption import get_captions_srt, burn_captions
 
 @shared_task(bind=True, base=AbortableTask)
 def process_video_task(self, video_id, filename, operations):
@@ -81,9 +82,9 @@ def process_video_task(self, video_id, filename, operations):
                 raise Exception(f"Invalid aspect ratio. Valid options are: {', '.join(valid_aspect_ratios)}")
             
             # Perform aspect ratio change
-            change_aspect_ratio(upload_path, aspect_ratio)
-            video.processed_path = upload_path  # Assuming the path remains the same after processing
-            video_operation.result_path = upload_path
+            result = change_aspect_ratio(upload_path, aspect_ratio)
+            video.processed_path = result  # Assuming the path remains the same after processing
+            video_operation.result_path = result
         
         elif operation_name == "add_logo":
             logo_path = os.path.join(current_app.config['LOGO_FOLDER'], operations.get("logo_filename"))
@@ -93,7 +94,32 @@ def process_video_task(self, video_id, filename, operations):
             result = add_logo_to_video(upload_path, logo_path, position)
             video.processed_path = result
             video_operation.result_path = result
+            
+        elif operation_name == "caption":
+            font_size = int(operations.get('font_size', 24))  
+            font_color = operations.get('font_color', 'yellow')  
+            font_name = operations.get('font_name', 'Comic Sans MS')  
+            background_color = operations.get('background_color', 'rgba(0,0,0,0.5)') 
+            margin = operations.get('margin', (20, 20))  
+            animation = get_animation_function(operations.get('animation', None))  
 
+            srt_path = get_captions_srt(upload_path)
+            
+            result = burn_captions(
+                upload_path, 
+                srt_path, 
+                font_size=font_size, 
+                font_color=font_color, 
+                font_name=font_name, 
+                background_color=background_color, 
+                margin=margin, 
+                animation=animation
+            )
+            
+            # Update the video object with the result path
+            video.processed_path = result
+            video_operation.result_path = result
+            
         # Update the operation log entry with success details
         video_operation.status = 'completed'
         video_operation.end_time = datetime.utcnow()
@@ -128,4 +154,43 @@ def process_video_task(self, video_id, filename, operations):
             db.session.commit()
 
         # Optionally, raise the error for Celery to retry the task
-        raise self.retry(exc=e, countdown=60, max_retries=3)
+        raise self.retry(exc=e, countdown=60, max_retries=1)
+
+
+def fade_in(txt_clip):
+    return txt_clip.crossfadein(1)
+
+def fade_out(txt_clip):
+    return txt_clip.crossfadeout(1)
+
+def slide_in_from_left(txt_clip, duration=1):
+    return txt_clip.set_position(lambda t: (-txt_clip.w + (txt_clip.w / duration) * t, 'center')).set_duration(duration)
+
+def slide_in_from_right(txt_clip, duration=1):
+    return txt_clip.set_position(lambda t: (txt_clip.w - (txt_clip.w / duration) * t, 'center')).set_duration(duration)
+
+def slide_in_from_top(txt_clip, duration=1):
+    return txt_clip.set_position(lambda t: ('center', -txt_clip.h + (txt_clip.h / duration) * t)).set_duration(duration)
+
+def slide_in_from_bottom(txt_clip, duration=1):
+    return txt_clip.set_position(lambda t: ('center', txt_clip.h - (txt_clip.h / duration) * t)).set_duration(duration)
+
+def zoom_in(txt_clip, duration=1):
+    return txt_clip.resize(lambda t: 1 + 0.2 * t / duration).set_duration(duration)
+
+def zoom_out(txt_clip, duration=1):
+    return txt_clip.resize(lambda t: 1.2 - 0.2 * t / duration).set_duration(duration)
+
+
+def get_animation_function(animation_name):
+    animations = {
+        'fade_in': fade_in,
+        'fade_out': fade_out,
+        'slide_in_from_left': slide_in_from_left,
+        'slide_in_from_right': slide_in_from_right,
+        'slide_in_from_top': slide_in_from_top,
+        'slide_in_from_bottom': slide_in_from_bottom,
+        'zoom_in': zoom_in,
+        'zoom_out': zoom_out
+    }
+    return animations.get(animation_name, None)
