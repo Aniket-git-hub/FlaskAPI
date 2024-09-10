@@ -7,7 +7,9 @@ RUN apt-get update && \
     apt-get install -y \
     curl \
     libglib2.0-0 \
+    imagemagick \
     libsm6 \
+    ffmpeg \
     libxext6 \
     libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -15,6 +17,8 @@ RUN apt-get update && \
 # # Install NVIDIA CUDA Toolkit (example for CUDA 11.8, adjust as needed)
 # RUN curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/debian10/x86_64/cuda-keyring_1.0-1_all.deb | dpkg -i -
 # RUN apt-get update && apt-get install -y cuda-toolkit-11-8
+
+COPY policy.xml /etc/ImageMagick-6/policy.xml
 
 # Upgrade pip and install requirements
 RUN pip install --upgrade pip

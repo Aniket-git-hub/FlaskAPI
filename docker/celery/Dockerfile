@@ -8,6 +8,8 @@ RUN apt-get update && \
     curl \
     libglib2.0-0 \
     libsm6 \
+    ffmpeg \
+    imagemagick \
     libxext6 \
     libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -17,6 +19,8 @@ RUN apt-get update && \
 # RUN apt-get update && apt-get install -y cuda-toolkit-11-8
 
 WORKDIR /app
+
+COPY policy.xml /etc/ImageMagick-6/policy.xml
 
 COPY requirements.txt .
 

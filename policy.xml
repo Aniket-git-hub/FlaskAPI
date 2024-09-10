@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<policymap>
+  <!-- Disable the policy that restricts reading from temporary files -->
+  <policy domain="path" rights="read|write" pattern="@/tmp/*"/>
+</policymap>
